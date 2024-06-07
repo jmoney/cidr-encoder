@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	MAGIC_BYTE = 0x0A
+	MAGIC_BYTE = byte(1)
 )
 
 var (
