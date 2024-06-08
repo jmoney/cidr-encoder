@@ -26,7 +26,7 @@ var (
 
 func main() {
 	flag.Parse()
-	filePath := fmt.Sprintf("./data/%s.acl", *id)
+	filePath := fmt.Sprintf("./%s.acl", *id)
 	if *encode {
 		file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
