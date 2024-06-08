@@ -1,10 +1,8 @@
 module github.com/jmoney/cidr-encoder
 
-go 1.22
+go 1.22.3
 
-require (
-	github.com/projectdiscovery/mapcidr v1.1.34
-)
+require github.com/projectdiscovery/mapcidr v1.1.34
 
 require (
 	github.com/aymerick/douceur v0.2.0 // indirect

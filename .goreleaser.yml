@@ -83,7 +83,7 @@ brews:
       token: "{{ .Env.GITHUB_TOKEN }}"
     
     ids:
-      - archive-cli-darwin-arm64
+      - archive-cli
 
     # Git author used to commit to the repository.
     # Defaults are shown.
