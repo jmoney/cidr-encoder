@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	id     = flag.String("id", "", "ID to use for the generation")
+	name   = flag.String("name", "", "The file base name to use as the ACL file name(e.g test.acl name is test)")
 	encode = flag.Bool("encode", false, "Encode the CIDRs")
 	search = flag.String("search", "", "Search for a IP in the CIDRs")
 )
@@ -44,7 +44,7 @@ func main() {
 			networks = append(networks, network)
 		}
 
-		file, err := os.OpenFile(filepath.Clean(file(*id)), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		file, err := os.OpenFile(filepath.Clean(file(*name)), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			log.Fatalf("failed to open file: %s", err)
 		}
@@ -53,7 +53,7 @@ func main() {
 		cidrencode.Encode(file, networks)
 
 	} else if *search != "" {
-		file, err := os.OpenFile(filepath.Clean(file(*id)), os.O_RDONLY, 0644)
+		file, err := os.OpenFile(filepath.Clean(file(*name)), os.O_RDONLY, 0644)
 		if err != nil {
 			log.Fatalf("failed to open file: %s", err)
 		}
