@@ -27,7 +27,22 @@ func main() {
 		str := string(stdin)
 		cidrs := strings.Split(strings.TrimSuffix(str, "\n"), "\n")
 
-		cidrencode.Encode(*id, cidrs)
+		networks := []*net.IPNet{}
+		for _, cidr := range cidrs {
+
+			if strings.HasPrefix(cidr, "#") || strings.HasPrefix(cidr, "//") || cidr == "" {
+				continue
+			}
+
+			_, network, err := net.ParseCIDR(cidr)
+			if err != nil {
+				log.Printf("Skipping invalid CIDR %s: %s", cidr, err)
+				continue
+			}
+			networks = append(networks, network)
+		}
+
+		cidrencode.Encode(*id, networks)
 
 	} else if *search != "" {
 		exists := cidrencode.Search(*id, net.ParseIP(*search))

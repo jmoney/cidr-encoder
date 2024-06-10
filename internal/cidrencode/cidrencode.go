@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"reflect"
-	"strings"
 
 	"github.com/projectdiscovery/mapcidr"
 )
@@ -32,7 +31,7 @@ func Search(id string, ip net.IP) bool {
 	return (int64(b[0]) == int64(MAGIC_BYTE))
 }
 
-func Encode(id string, cidrs []string) {
+func Encode(id string, networks []*net.IPNet) {
 	file, err := os.OpenFile(file(id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		log.Fatalf("failed to open file: %s", err)
@@ -40,16 +39,7 @@ func Encode(id string, cidrs []string) {
 	defer file.Close() // Make sure to close the file when the function returns
 
 	ips := []int64{}
-	for _, cidr := range cidrs {
-		if strings.HasPrefix(cidr, "#") || strings.HasPrefix(cidr, "//") || cidr == "" {
-			continue
-		}
-
-		_, network, err := net.ParseCIDR(cidr)
-		if err != nil {
-			log.Printf("Skipping invalid CIDR %s: %s", cidr, err)
-			continue
-		}
+	for _, network := range networks {
 		first, last, _ := mapcidr.AddressRange(network)
 		ips = append(ips, mapcidr.Inet_aton(first), mapcidr.Inet_aton(last))
 	}
@@ -60,21 +50,15 @@ func Encode(id string, cidrs []string) {
 	binary.LittleEndian.PutUint64(b, uint64(offset))
 	file.WriteAt(b, 0)
 
-	for _, cidr := range cidrs {
-		_, network, err := net.ParseCIDR(cidr)
-		if err != nil {
-			log.Printf("Skipping invalid CIDR %s: %s", cidr, err)
-			continue
-		}
+	for _, network := range networks {
 		first, last, _ := mapcidr.AddressRange(network)
 		ipRange := mapcidr.Inet_aton(last) - mapcidr.Inet_aton(first) + 1
-		log.Printf("CIDR: %s, IP Range: %d", cidr, ipRange)
+		log.Printf("CIDR: %s, IP Range: %d", network, ipRange)
 		b := make([]byte, ipRange)
 		for i := 0; i < len(b); i++ {
 			b[i] = MAGIC_BYTE
 		}
 		file.WriteAt(b, int64(mapcidr.Inet_aton(first))-offset)
-
 	}
 }
 
