@@ -31,7 +31,6 @@ func TestE2E_Full(t *testing.T) {
 		ipAddress := mapcidr.Inet_ntoa(int64(i))
 
 		t.Run(fmt.Sprintf("TestE2E_%s", ipAddress), func(t *testing.T) {
-			t.Parallel()
 			exists := Search("test", ipAddress)
 			contained := false
 			for _, network := range networks {
