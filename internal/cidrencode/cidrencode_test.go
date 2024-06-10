@@ -34,7 +34,6 @@ func TestE2E_Full(t *testing.T) {
 			exists := Search("test", ipAddress)
 			contained := false
 			for _, network := range networks {
-				t.Logf("Checking IP %s in CIDR %s", ipAddress, network)
 				contained = contained || network.Contains(ipAddress)
 				if network.Contains(ipAddress) {
 					t.Logf("IP %s exists in the CIDR %s", ipAddress, network)
