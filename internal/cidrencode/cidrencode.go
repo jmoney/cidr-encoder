@@ -2,7 +2,6 @@ package cidrencode
 
 import (
 	"encoding/binary"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -15,13 +14,7 @@ const (
 	MAGIC_BYTE = byte(1)
 )
 
-func Search(id string, ip net.IP) bool {
-	file, err := os.OpenFile(file(id), os.O_RDONLY, 0644)
-	if err != nil {
-		log.Fatalf("failed to open file: %s", err)
-	}
-	defer file.Close() // Make sure to close the file when the function returns
-
+func Search(file *os.File, ip net.IP) bool {
 	b := make([]byte, 8)
 	file.ReadAt(b, 0)
 	offset := int64(binary.LittleEndian.Uint64(b))
@@ -31,13 +24,7 @@ func Search(id string, ip net.IP) bool {
 	return (int64(b[0]) == int64(MAGIC_BYTE))
 }
 
-func Encode(id string, networks []*net.IPNet) {
-	file, err := os.OpenFile(file(id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		log.Fatalf("failed to open file: %s", err)
-	}
-	defer file.Close() // Make sure to close the file when the function returns
-
+func Encode(file *os.File, networks []*net.IPNet) {
 	ips := []int64{}
 	for _, network := range networks {
 		first, last, _ := mapcidr.AddressRange(network)
@@ -60,10 +47,6 @@ func Encode(id string, networks []*net.IPNet) {
 		}
 		file.WriteAt(b, int64(mapcidr.Inet_aton(first))-offset)
 	}
-}
-
-func file(id string) string {
-	return fmt.Sprintf("./%s.acl", id)
 }
 
 func findMin(a []int64) int64 {

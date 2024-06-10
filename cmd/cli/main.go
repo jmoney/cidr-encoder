@@ -2,10 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/jmoney/cidr-encoder/internal/cidrencode"
@@ -42,13 +44,29 @@ func main() {
 			networks = append(networks, network)
 		}
 
-		cidrencode.Encode(*id, networks)
+		file, err := os.OpenFile(filepath.Clean(file(*id)), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			log.Fatalf("failed to open file: %s", err)
+		}
+		defer file.Close() // Make sure to close the file when the function returns
+
+		cidrencode.Encode(file, networks)
 
 	} else if *search != "" {
-		exists := cidrencode.Search(*id, net.ParseIP(*search))
+		file, err := os.OpenFile(filepath.Clean(file(*id)), os.O_RDONLY, 0644)
+		if err != nil {
+			log.Fatalf("failed to open file: %s", err)
+		}
+		defer file.Close() // Make sure to close the file when the function returns
+
+		exists := cidrencode.Search(file, net.ParseIP(*search))
 		log.Printf("Exists: %t", exists)
 		if !exists {
 			os.Exit(1)
 		}
 	}
+}
+
+func file(id string) string {
+	return fmt.Sprintf("./%s.acl", id)
 }
