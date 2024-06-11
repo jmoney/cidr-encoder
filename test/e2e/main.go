@@ -18,8 +18,9 @@ import (
 )
 
 var (
-	memprof = flag.Bool("memprofile", false, "write memory to profiles every 10s")
-	elog    = log.New(os.Stderr, "[ERROR] ", log.Ldate|log.Ltime|log.Lshortfile)
+	memprof  = flag.String("memprofile", "", "write memory to profiles every 10s to this directory")
+	interval = flag.Duration("interval", 10*time.Second, "interval to write memory profiles")
+	elog     = log.New(os.Stderr, "[ERROR] ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	networks = []*net.IPNet{
 		convertToCidr("10.1.0.0/16"),
@@ -29,15 +30,19 @@ var (
 	}
 )
 
-func logMemStats(memprof *bool, interval time.Duration) {
+func logMemStats(memprof *string, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	i := 0
 	var mem runtime.MemStats
 	for range ticker.C {
-		if *memprof {
-			memProf, err := os.Create(fmt.Sprintf("memprofile-%d.pprof", i))
+		if *memprof != "" {
+			err := os.MkdirAll(*memprof, 0755)
+			if err != nil {
+				elog.Fatalln(err)
+			}
+			memProf, err := os.Create(fmt.Sprintf("%s/memprofile-%d.pprof", *memprof, i))
 			if err != nil {
 				elog.Fatalln(err)
 			}
@@ -64,7 +69,7 @@ func logMemStats(memprof *bool, interval time.Duration) {
 
 func main() {
 	flag.Parse()
-	go logMemStats(memprof, 10*time.Second)
+	go logMemStats(memprof, *interval)
 	os.Exit(test())
 }
 
@@ -112,12 +117,14 @@ func checkIp(acl *os.File, ipAddress *net.IP) bool {
 	if len(containedNetworks) > 0 {
 		if !exists {
 			elog.Printf("IP %s does not exist in the database but should\n", ipAddress)
+			return false
 		}
 	} else if exists {
 		elog.Printf("IP %s exists in the database but should not\n", ipAddress)
+		return false
 	}
 
-	return exists && len(containedNetworks) > 0
+	return true
 }
 
 func convertToCidr(cidr string) *net.IPNet {

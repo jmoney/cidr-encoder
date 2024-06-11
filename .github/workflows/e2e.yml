@@ -25,6 +25,12 @@ jobs:
       -
         name: Run Full Test Suite
         run: |
-            go run test/e2e/main.go
+            go run test/e2e/main.go -memprofile profiles/ -interval 1m
         env:
             CGO_ENABLED: 0
+      - name: Archive the profiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: mem-profiles
+          path: profiles/memprofile-*.pprof
+          retention-days: 5

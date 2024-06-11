@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -61,7 +62,14 @@ func main() {
 
 		ipAddress := net.ParseIP(*search)
 		exists := cidrencode.Search(file, &ipAddress)
-		log.Printf("Exists: %t", exists)
+		result := map[string]bool{
+			ipAddress.String(): exists,
+		}
+		output, err := json.Marshal(result)
+		if err != nil {
+			log.Fatalf("failed to marshal result: %s", err)
+		}
+		fmt.Println(string(output))
 		if !exists {
 			os.Exit(1)
 		}
