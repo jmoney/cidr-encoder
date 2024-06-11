@@ -1,6 +1,6 @@
 # Run golang tests on branch main
 
-name: Tests
+name: Full E2E Test Suite
 
 on:
   push:
@@ -22,8 +22,9 @@ jobs:
         uses: actions/setup-go@v4
         with:
             go-version: 1.22.3
-
       -
         name: Run Full Test Suite
         run: |
             go run test/e2e/main.go
+        env:
+            CGO_ENABLED: 0

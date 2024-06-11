@@ -59,7 +59,8 @@ func main() {
 		}
 		defer file.Close() // Make sure to close the file when the function returns
 
-		exists := cidrencode.Search(file, net.ParseIP(*search))
+		ipAddress := net.ParseIP(*search)
+		exists := cidrencode.Search(file, &ipAddress)
 		log.Printf("Exists: %t", exists)
 		if !exists {
 			os.Exit(1)

@@ -2,28 +2,69 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
+	"fmt"
 	"log"
 	"math"
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/pprof"
+	"time"
 
 	"github.com/jmoney/cidr-encoder/internal/cidrencode"
 	"github.com/projectdiscovery/mapcidr"
 )
 
 var (
+	memprof = flag.Bool("memprofile", false, "write memory to profiles every 10s")
+	elog    = log.New(os.Stderr, "[ERROR] ", log.Ldate|log.Ltime|log.Lshortfile)
+
 	networks = []*net.IPNet{
 		convertToCidr("10.1.0.0/16"),
 		convertToCidr("10.2.1.3/24"),
 		convertToCidr("3.4.2.4/22"),
 		convertToCidr("52.23.164.188/32"),
 	}
-
-	elog = log.New(os.Stderr, "[ERROR] ", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
+func logMemStats(memprof *bool, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	i := 0
+	var mem runtime.MemStats
+	for range ticker.C {
+		if *memprof {
+			memProf, err := os.Create(fmt.Sprintf("memprofile-%d.pprof", i))
+			if err != nil {
+				elog.Fatalln(err)
+			}
+
+			runtime.GC()
+			if err := pprof.WriteHeapProfile(memProf); err != nil {
+				elog.Println(err)
+			}
+			memProf.Close()
+		}
+
+		runtime.ReadMemStats(&mem)
+		memStats := map[string]string{
+			"timestamp": time.Now().Format(time.RFC3339),
+			"Alloc":     fmt.Sprintf("%v MiB", mem.Alloc/1024/1024),
+			"Sys":       fmt.Sprintf("%v MiB", mem.Sys/1024/1024),
+			"NumGC":     fmt.Sprintf("%v", mem.NumGC),
+		}
+		output, _ := json.Marshal(memStats)
+		fmt.Printf("%s\n", output)
+		i++
+	}
+}
+
 func main() {
+	flag.Parse()
+	go logMemStats(memprof, 10*time.Second)
 	os.Exit(test())
 }
 
@@ -35,17 +76,17 @@ func test() int {
 	defer testAcl.Close()
 	defer os.Remove(testAcl.Name())
 
-	failed := make([]net.IP, 0)
+	failed := make([]*net.IP, 0)
 	cidrencode.Encode(testAcl, networks)
 	if err := testAcl.Sync(); err != nil {
 		elog.Fatalf("failed to sync file: %s", err)
 	}
 
+	var ipAddress net.IP
 	for i := 0; i < math.MaxUint32; i++ {
-		ipAddress := mapcidr.Inet_ntoa(int64(i))
-		check := checkIp(testAcl, ipAddress)
-		if !check {
-			failed = append(failed, ipAddress)
+		ipAddress = mapcidr.Inet_ntoa(int64(i))
+		if !checkIp(testAcl, &ipAddress) {
+			failed = append(failed, &ipAddress)
 		}
 	}
 
@@ -58,35 +99,31 @@ func test() int {
 	return len(failed)
 }
 
-func checkIp(acl *os.File, ipAddress net.IP) bool {
+func checkIp(acl *os.File, ipAddress *net.IP) bool {
 	exists := cidrencode.Search(acl, ipAddress)
 
 	containedNetworks := make([]*net.IPNet, 0)
 	for _, network := range networks {
-		if network.Contains(ipAddress) {
+		if network.Contains(*ipAddress) {
 			containedNetworks = append(containedNetworks, network)
 		}
+	}
 
-		if len(containedNetworks) > 0 {
-			if !exists {
-				elog.Printf("IP %s does not exist in the database but should\n", ipAddress)
-				return false
-			}
+	if len(containedNetworks) > 0 {
+		if !exists {
+			elog.Printf("IP %s does not exist in the database but should\n", ipAddress)
 		}
-	}
-
-	if exists && len(containedNetworks) == 0 {
+	} else if exists {
 		elog.Printf("IP %s exists in the database but should not\n", ipAddress)
-		return false
 	}
 
-	return exists
+	return exists && len(containedNetworks) > 0
 }
 
 func convertToCidr(cidr string) *net.IPNet {
 	_, network, err := net.ParseCIDR(cidr)
 	if err != nil {
-		panic(err)
+		elog.Fatalln(err)
 	}
 	return network
 }
