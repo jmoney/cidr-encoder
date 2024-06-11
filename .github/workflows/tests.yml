@@ -1,0 +1,36 @@
+# Run golang tests on branch main
+
+name: Unit Tests
+
+on:
+  push:
+    branches:
+        - main
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      -
+        name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+            go-version: 1.22.3
+      -
+        name: Run Full Test Suite
+        run: |
+            go run test/e2e/main.go -memprofile profiles/ -interval 1m
+        env:
+            CGO_ENABLED: 0
+      - name: Archive the profiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: mem-profiles
+          path: profiles/memprofile-*.pprof
+          retention-days: 5
