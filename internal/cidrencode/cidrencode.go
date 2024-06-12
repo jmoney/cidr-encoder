@@ -16,6 +16,13 @@ const (
 	MAGIC_BYTE = byte(1)
 )
 
+func Calculate(networks []*net.IPNet) (int64, int64, int64) {
+	ips := convertToRangePairs(networks)
+	min, max := findMinMax(ips)
+	estimatedFileSize := max - min
+	return min, max, estimatedFileSize
+}
+
 func Search(file *os.File, ip *net.IP) bool {
 	b := make([]byte, 8)
 	file.ReadAt(b, 0)
@@ -27,15 +34,8 @@ func Search(file *os.File, ip *net.IP) bool {
 }
 
 func Encode(file *os.File, networks []*net.IPNet) {
-	ips := []int64{}
-	for _, network := range networks {
-		first, last, _ := mapcidr.AddressRange(network)
-		ips = append(ips, mapcidr.Inet_aton(first), mapcidr.Inet_aton(last))
-	}
-
-	min, max := findMinMax(ips)
-	estimatedFileSize := max - min
-	log.Printf("Estimated File Size: %s\n", bytesToHumanReadable(estimatedFileSize))
+	min, _, estimatedFileSize := Calculate(networks)
+	log.Printf("Estimated File Size: %s\n", BytesToHumanReadable(estimatedFileSize))
 	offset := min - int64(reflect.TypeOf(int64(0)).Size())
 	log.Printf("Offset: %d", offset)
 	b := make([]byte, 8)
@@ -54,7 +54,7 @@ func Encode(file *os.File, networks []*net.IPNet) {
 	}
 }
 
-func bytesToHumanReadable(bytes int64) string {
+func BytesToHumanReadable(bytes int64) string {
 	units := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
 	if bytes < 10 {
 		return fmt.Sprintf("%d B", bytes) // Handle small bytes directly
@@ -80,4 +80,13 @@ func findMinMax(a []int64) (int64, int64) {
 		}
 	}
 	return min, max
+}
+
+func convertToRangePairs(networks []*net.IPNet) []int64 {
+	ips := []int64{}
+	for _, network := range networks {
+		first, last, _ := mapcidr.AddressRange(network)
+		ips = append(ips, mapcidr.Inet_aton(first), mapcidr.Inet_aton(last))
+	}
+	return ips
 }

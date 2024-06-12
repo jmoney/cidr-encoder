@@ -12,17 +12,36 @@ import (
 	"strings"
 
 	"github.com/jmoney/cidr-encoder/internal/cidrencode"
+	"github.com/projectdiscovery/mapcidr"
 )
 
 var (
 	name   = flag.String("name", "", "The file base name to use as the ACL file name(e.g test.acl name is test)")
 	encode = flag.Bool("encode", false, "Encode the CIDRs")
 	search = flag.String("search", "", "Search for a IP in the CIDRs")
+	calc   = flag.Bool("calc", false, "Calculate the size of the encoded file")
 )
 
 func main() {
 	flag.Parse()
-	if *encode {
+
+	if *calc {
+		stdin, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			log.Fatalf("failed to read from stdin: %s", err)
+		}
+		str := string(stdin)
+		cidrs := strings.Split(strings.TrimSuffix(str, "\n"), "\n")
+		min, max, estimatedSize := cidrencode.Calculate(convertStrToNetwork(cidrs))
+		result := map[string]interface{}{
+			"min":           mapcidr.Inet_ntoa(min),
+			"max":           mapcidr.Inet_ntoa(max),
+			"estimatedSize": estimatedSize,
+			"humanReadable": cidrencode.BytesToHumanReadable(estimatedSize),
+		}
+		output, _ := json.Marshal(result)
+		fmt.Println(string(output))
+	} else if *encode {
 		stdin, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			log.Fatalf("failed to read from stdin: %s", err)
@@ -30,20 +49,7 @@ func main() {
 		str := string(stdin)
 		cidrs := strings.Split(strings.TrimSuffix(str, "\n"), "\n")
 
-		networks := []*net.IPNet{}
-		for _, cidr := range cidrs {
-
-			if strings.HasPrefix(cidr, "#") || strings.HasPrefix(cidr, "//") || cidr == "" {
-				continue
-			}
-
-			_, network, err := net.ParseCIDR(cidr)
-			if err != nil {
-				log.Printf("Skipping invalid CIDR %s: %s", cidr, err)
-				continue
-			}
-			networks = append(networks, network)
-		}
+		networks := convertStrToNetwork(cidrs)
 
 		file, err := os.OpenFile(filepath.Clean(file(*name)), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
@@ -74,6 +80,23 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func convertStrToNetwork(cidrs []string) []*net.IPNet {
+	networks := []*net.IPNet{}
+	for _, cidr := range cidrs {
+		if strings.HasPrefix(cidr, "#") || strings.HasPrefix(cidr, "//") || cidr == "" {
+			continue
+		}
+
+		_, network, err := net.ParseCIDR(cidr)
+		if err != nil {
+			log.Printf("Skipping invalid CIDR %s: %s", cidr, err)
+			continue
+		}
+		networks = append(networks, network)
+	}
+	return networks
 }
 
 func file(id string) string {
