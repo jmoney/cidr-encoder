@@ -1,5 +1,3 @@
-# Run golang tests on branch main
-
 name: Full E2E Test Suite
 
 on:
