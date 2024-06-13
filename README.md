@@ -10,13 +10,13 @@ The calculation for how big a file would take is effectively the largest IP - th
 $ cidr-encoder -h
 Usage of cidr-encoder:
   -calc
-        Calculate the size of the encoded file
+        Calculate the size of the encoded file. Reads from STDIN.
   -encode
-        Encode the CIDRs
+        Encode the CIDRs. Reads from STDIN.
   -name string
-        The file base name to use as the ACL file name(e.g test.acl name is test)
+        The file base name to use as the ACL file name(e.g test.acl name is test).
   -search string
-        Search for a IP in the CIDRs
+        Search for a IP in the CIDRs.
 ```
 
 `-calc`, `encode`, and `search` are all mutually exclusive but the priority in the event that all are specified are `calc` then `encode` then `search`.

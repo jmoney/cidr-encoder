@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	name   = flag.String("name", "", "The file base name to use as the ACL file name(e.g test.acl name is test)")
-	encode = flag.Bool("encode", false, "Encode the CIDRs")
-	search = flag.String("search", "", "Search for a IP in the CIDRs")
-	calc   = flag.Bool("calc", false, "Calculate the size of the encoded file")
+	name   = flag.String("name", "", "The file base name to use as the ACL file name(e.g test.acl name is test).")
+	encode = flag.Bool("encode", false, "Encode the CIDRs. Reads from STDIN.")
+	search = flag.String("search", "", "Search for a IP in the CIDRs.")
+	calc   = flag.Bool("calc", false, "Calculate the size of the encoded file. Reads from STDIN.")
 )
 
 func main() {
